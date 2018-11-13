@@ -2,6 +2,8 @@
 
 namespace AppBundle\Repository;
 
+use AppBundle\Entity\Group;
+
 /**
  * UserRepository
  *
@@ -10,4 +12,31 @@ namespace AppBundle\Repository;
  */
 class UserRepository extends \Doctrine\ORM\EntityRepository
 {
+    public function addUsersToGroups(Group $group, array $userIds, array $usersInGroup)
+    {
+        foreach ($userIds as $userId) {
+            $user = $this->find($userId);
+            if (null !== $user) {
+                if (false === $key = array_search($userId, $usersInGroup, true)) {
+                    $user->setGroup($group);
+                } else {
+                    // User should be removed from Group
+                    unset($usersInGroup[$key]);
+                }
+            }
+        }
+
+        return $usersInGroup;
+    }
+
+    public function clearGroupForUsers(array $userIds)
+    {
+        // Remove Users from Group
+        foreach ($userIds as $item) {
+            $user = $this->find($item);
+            if (null !== $user) {
+                $user->setGroup(null);
+            }
+        }
+    }
 }

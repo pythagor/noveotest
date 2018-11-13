@@ -36,28 +36,44 @@ class UserController extends FOSRestController
      */
     public function postAction(Request $request)
     {
+        $em = $this->getDoctrine()->getManager();
         $entity = new User();
 
         $entity->setEmail($request->get('email'));
-        $entity->setLastName($request->get('last_name'));
-        $entity->setFirstName($request->get('first_name'));
+        $entity->setLastName($request->get('lastName'));
+        $entity->setFirstName($request->get('firstName'));
         $entity->setState($request->get('state'));
         $entity->setCreationDate(new \DateTime());
+
+        if (null !== $group_id = $request->get('group_id')) {
+            $group = $em->getRepository(Group::class)->find($group_id);
+            if (null === $group) {
+                return new View([
+                    'message' => 'Group does not exist.',
+                ],
+                    Response::HTTP_BAD_REQUEST
+                );
+            }
+            $entity->setGroup($group);
+        }
 
         $validator = $this->get('validator');
         $errors = $validator->validate($entity);
 
         if (count($errors) > 0) {
-            $errorsString = (string)$errors;
-
-            return new View($errorsString, Response::HTTP_BAD_REQUEST);
+            return new View($errors, Response::HTTP_BAD_REQUEST);
         }
 
-        $em = $this->getDoctrine()->getManager();
         $em->persist($entity);
         $em->flush();
 
-        return new View('User has been added successfully', Response::HTTP_OK);
+        return new View(
+            [
+                'message' => 'User has been added successfully.',
+                'user_id' => $entity->getId(),
+            ],
+            Response::HTTP_OK
+        );
     }
 
     /**
@@ -101,11 +117,11 @@ class UserController extends FOSRestController
             $user->setEmail($email);
         }
 
-        if (null !== $lastName = $request->get('last_name')) {
+        if (null !== $lastName = $request->get('lastName')) {
             $user->setLastName($lastName);
         }
 
-        if (null !== $firstName = $request->get('first_name')) {
+        if (null !== $firstName = $request->get('firstName')) {
             $user->setFirstName($firstName);
         }
 
@@ -125,13 +141,17 @@ class UserController extends FOSRestController
         $errors = $validator->validate($user);
 
         if (count($errors) > 0) {
-            $errorsString = (string)$errors;
-
-            return new View($errorsString, Response::HTTP_BAD_REQUEST);
+            return new View($errors, Response::HTTP_BAD_REQUEST);
         }
 
         $em->flush();
 
-        return new View('User has been updated successfullly', Response::HTTP_OK);
+        return new View(
+            [
+                'message' => 'User has been updated successfully.',
+                'user_id' => $user->getId(),
+            ],
+            Response::HTTP_OK
+        );
     }
 }

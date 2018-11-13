@@ -1,13 +1,23 @@
 <?php
 
-use Symfony\Component\Debug\Debug;
+use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\Tools\SchemaTool;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-/*Debug::enable();
-
 $kernel = new AppKernel('test', true);
+$kernel->boot();
 
-$doctrine = $kernel->getContainer()->get('doctrine');
-
-$a = 1;*/
+/** @var EntityManager $em */
+$em = $kernel->getContainer()->get('doctrine')->getManager();
+$metadatas = $em->getMetadataFactory()->getAllMetadata();
+if (!empty($metadatas)) {
+    $tool = new SchemaTool($em);
+    $tool->dropSchema($metadatas);
+    try {
+        $tool->createSchema($metadatas);
+    } catch (\Exception $e) {
+        echo $e->getMessage() . PHP_EOL;
+        die();
+    }
+}

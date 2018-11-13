@@ -2,6 +2,9 @@
 
 namespace AppBundle\Repository;
 
+use AppBundle\Entity\Group;
+use AppBundle\Entity\User;
+
 /**
  * GroupRepository
  *
@@ -10,4 +13,19 @@ namespace AppBundle\Repository;
  */
 class GroupRepository extends \Doctrine\ORM\EntityRepository
 {
+    public function getUserIds($groupId)
+    {
+        /** @var Group $group */
+        $group = $this->find($groupId);
+
+        $users = $group->getUsers();
+        $userIds = [];
+
+        /** @var User $user */
+        foreach ($users as $user) {
+            $userIds[] = $user->getId();
+        }
+
+        return $userIds;
+    }
 }

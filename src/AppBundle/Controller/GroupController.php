@@ -3,6 +3,7 @@
 namespace AppBundle\Controller;
 
 use AppBundle\Entity\Group;
+use AppBundle\Entity\User;
 use FOS\RestBundle\Controller\FOSRestController;
 use FOS\RestBundle\View\View;
 use FOS\RestBundle\Controller\Annotations as Rest;
@@ -43,16 +44,20 @@ class GroupController extends FOSRestController
         $errors = $validator->validate($entity);
 
         if (count($errors) > 0) {
-            $errorsString = (string)$errors;
-
-            return new View($errorsString, Response::HTTP_BAD_REQUEST);
+            return new View($errors, Response::HTTP_BAD_REQUEST);
         }
 
         $em = $this->getDoctrine()->getManager();
         $em->persist($entity);
         $em->flush();
 
-        return new View('Group has been added successfully', Response::HTTP_OK);
+        return new View(
+            [
+                'message'  => 'Group has been added successfully.',
+                'group_id' => $entity->getId(),
+            ],
+            Response::HTTP_OK
+        );
     }
 
     /**
@@ -65,9 +70,8 @@ class GroupController extends FOSRestController
     {
         $em = $this->getDoctrine()->getManager();
 
-        $group = $em
-            ->getRepository(Group::class)
-            ->find($id);
+        $groupRepository = $em->getRepository(Group::class);
+        $group = $groupRepository->find($id);
 
         if (null === $group) {
             return new View('Group not found', Response::HTTP_NOT_FOUND);
@@ -77,17 +81,36 @@ class GroupController extends FOSRestController
             $group->setName($name);
         }
 
+        if (
+            (null !== $userIds = $request->get('users_list')) &&
+            is_array($userIds)
+        ) {
+            $userRepository = $em->getRepository(User::class);
+            $usersInGroup = $groupRepository->getUserIds($group->getId());
+            $usersInGroupFiltered = $userRepository->addUsersToGroups(
+                $group,
+                $userIds,
+                $usersInGroup
+            );
+
+            $userRepository->clearGroupForUsers($usersInGroupFiltered);
+        }
+
         $validator = $this->get('validator');
         $errors = $validator->validate($group);
 
         if (count($errors) > 0) {
-            $errorsString = (string)$errors;
-
-            return new View($errorsString, Response::HTTP_BAD_REQUEST);
+            return new View($errors, Response::HTTP_BAD_REQUEST);
         }
 
         $em->flush();
 
-        return new View('Group has been updated successfullly', Response::HTTP_OK);
+        return new View(
+            [
+                'message'  => 'Group has been updated successfully.',
+                'group_id' => $group->getId(),
+            ],
+            Response::HTTP_OK
+        );
     }
 }
